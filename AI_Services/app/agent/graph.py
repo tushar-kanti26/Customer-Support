@@ -1,12 +1,12 @@
-﻿import json
+import json
 import re
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, StateGraph
 
-from agent.state import EmailState
-from config import settings
-from pinecone_client import retrieve_context
+from app.agent.state import EmailState
+from app.config import settings
+from app.pinecone_client import retrieve_context
 
 
 _llm: ChatGoogleGenerativeAI | None = None
@@ -50,9 +50,32 @@ def _extract_json_object(text: str) -> dict:
 
 
 def _deterministic_resolution(subject: str, body: str, context: list[str]) -> tuple[bool, str, str]:
+    text = f"{subject}\n{body}".lower()
     if not context:
-        return False, "", "No knowledge-base context available to safely auto-resolve this query."
-    return False, "", "The query could not be confidently resolved from uploaded knowledge-base documents."
+        return False, "", "No policy context available to verify a safe response."
+
+    patterns = [
+        (r"\b(refund|return|money back)\b", "refund/return"),
+        (r"\b(cancel|cancellation|unsubscribe)\b", "cancellation"),
+        (r"\b(track|tracking|where is my order|delivery status)\b", "order tracking"),
+        (r"\b(reset password|forgot password|password reset|can't log in|cannot log in)\b", "password reset/login"),
+        (r"\b(change address|update address|wrong address)\b", "address update"),
+        (r"\b(invoice|billing|charged|payment failed|payment issue)\b", "billing/payment"),
+    ]
+
+    for pattern, label in patterns:
+        if re.search(pattern, text):
+            reply = (
+                "Hello,\n\n"
+                "Thanks for reaching out. I can help with your request. "
+                "Based on our support policy, this issue is handled through our standard "
+                f"{label} workflow. Please reply with any missing details (order ID, account email, and relevant dates) "
+                "so we can complete this right away.\n\n"
+                "Regards,\nResolveX Team"
+            )
+            return True, reply, ""
+
+    return False, "", "Message type is outside configured auto-resolution categories."
 
 
 def retrieve_and_decide(state: EmailState) -> EmailState:
@@ -77,7 +100,6 @@ can_resolve (boolean)
 draft_reply (string)
 escalation_reason (string)
 Do not include markdown or code fences.
-Rule: can_resolve must be true only when the reply is supported by the provided policy context.
 """
     try:
         response = get_llm().invoke(prompt)
@@ -99,12 +121,6 @@ Rule: can_resolve must be true only when the reply is supported by the provided 
     can_resolve = bool(data.get("can_resolve", False))
     draft_reply = str(data.get("draft_reply", "")).strip()
     escalation_reason = str(data.get("escalation_reason", "")).strip() or "Insufficient policy clarity."
-
-    # Auto-resolution is allowed only when KB context exists.
-    if not context:
-        can_resolve = False
-        if not escalation_reason:
-            escalation_reason = "No knowledge-base context available to safely auto-resolve this query."
 
     if not draft_reply and can_resolve:
         # Fall back to deterministic resolver when model does not return usable JSON payload.
@@ -159,4 +175,3 @@ def build_graph():
 
 
 agent_graph = build_graph()
-

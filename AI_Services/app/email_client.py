@@ -109,7 +109,7 @@ def fetch_unseen_emails(
     mail = _get_or_create_imap_connection(email_user, email_password, imap_host, imap_port)
     mail.select("inbox")
 
-    status, data = mail.uid("search", None, "UNSEEN")
+    status, data = mail.search(None, "UNSEEN")
     if status != "OK" or not data or not data[0]:
         return []
 
@@ -118,7 +118,7 @@ def fetch_unseen_emails(
 
     for msg_id in message_ids:
         # Use BODY.PEEK[] to avoid changing message seen-state during reads.
-        fetch_status, fetched = mail.uid("fetch", msg_id, "(BODY.PEEK[])")
+        fetch_status, fetched = mail.fetch(msg_id, "(BODY.PEEK[])")
         if fetch_status != "OK" or not fetched:
             continue
 
@@ -128,14 +128,10 @@ def fetch_unseen_emails(
         sender = parseaddr(parsed.get("From", ""))[1]
         subject = _decode_mime_words(parsed.get("Subject", ""))
         body = _extract_body(parsed)
-        internet_message_id = (parsed.get("Message-ID", "") or "").strip().strip("<>")
-        uid = msg_id.decode()
-        dedupe_key = internet_message_id or f"imap-uid:{uid}"
 
         emails.append(
             {
-                "message_id": uid,
-                "dedupe_key": dedupe_key,
+                "message_id": msg_id.decode(),
                 "from": sender,
                 "subject": subject,
                 "body": body,
@@ -155,7 +151,7 @@ def mark_email_seen(
     mail = _get_or_create_imap_connection(email_user, email_password, imap_host, imap_port)
     mail.select("inbox")
     # Mark a processed message as seen to avoid duplicate ingestion.
-    mail.uid("store", message_id, "+FLAGS", "(\\Seen)")
+    mail.store(message_id.encode(), "+FLAGS", "\\Seen")
 
 def send_email_reply(
     to_email: str,

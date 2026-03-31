@@ -1,9 +1,9 @@
-﻿from datetime import datetime
+from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database import Base
+from app.database import Base
 
 
 class SupportUser(Base):
@@ -24,13 +24,9 @@ class SupportUser(Base):
 
 class UnresolvedTicket(Base):
     __tablename__ = "unresolved_tickets"
-    __table_args__ = (
-        UniqueConstraint("company_id", "source_message_id", name="uq_unresolved_tickets_company_message"),
-    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     company_id: Mapped[int] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
-    source_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     sender_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     subject: Mapped[str] = mapped_column(String(255), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
@@ -76,4 +72,3 @@ class CompanyDocument(Base):
         ForeignKey("support_users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-

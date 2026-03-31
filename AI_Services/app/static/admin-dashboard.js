@@ -1,264 +1,260 @@
-// ==================== ICONS INIT ====================
-function refreshIcons() {
-  if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    window.lucide.createIcons();
-  }
-}
-
-refreshIcons();
-
-// ==================== GLOBAL STATE & API ====================
-const API_BASE = '/api';
+// ==================== GLOBAL STATE ====================
 const token = localStorage.getItem('cc_token');
 const role = localStorage.getItem('cc_role');
+const companyId = localStorage.getItem('cc_company_id');
 
-if (!token) {
+const API_BASE = '/api';
+
+// Redirect to login if not authenticated as company_admin
+if (!token || role !== 'company_admin') {
   window.location.href = '/static/index.html';
-} else if (role === 'human_agent') {
-  window.location.href = '/static/agent-dashboard.html';
-} else if (role !== 'company_admin') {
-  window.location.href = '/static/index.html';
 }
 
-function showToast(message, type = 'info') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-  const toast = document.createElement('div');
-  const colors = {
-    success: 'bg-green-50 text-green-800 border-green-200',
-    error: 'bg-red-50 text-red-800 border-red-200',
-    info: 'bg-blue-50 text-blue-800 border-blue-200'
-  };
-  const iconPaths = {
-    success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>',
-    error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>',
-    info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
-  };
+// ==================== PAGE INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', () => {
+  loadCompanyDashboard();
+});
 
-  toast.className = `flex items-start gap-3 p-4 rounded-xl border shadow-lg shadow-slate-200/50 transform transition-all duration-300 translate-x-full opacity-0 ${colors[type]}`;
-  toast.innerHTML = `
-    <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${iconPaths[type]}</svg>
-    <p class="text-sm font-medium leading-relaxed">${message}</p>
-    <button class="ml-auto text-slate-400 hover:text-slate-600 transition-colors" onclick="this.parentElement.remove()">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-    </button>
-  `;
-  container.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.remove('translate-x-full', 'opacity-0'));
-  setTimeout(() => {
-    toast.classList.add('opacity-0', 'translate-x-full');
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
-}
-
-function showConfirm(title, message, onConfirm) {
-  const modal = document.getElementById('confirm-modal');
-  const titleEl = document.getElementById('confirm-title');
-  const messageEl = document.getElementById('confirm-message');
-  const btnCancel = document.getElementById('confirm-cancel');
-  const btnOk = document.getElementById('confirm-ok');
-
-  if (!modal || !titleEl || !messageEl || !btnCancel || !btnOk) {
-    if (window.confirm(message)) onConfirm();
-    return;
-  }
-
-  titleEl.textContent = title;
-  messageEl.textContent = message;
-  modal.classList.remove('hidden');
-
-  const cleanup = () => {
-    modal.classList.add('hidden');
-    btnCancel.removeEventListener('click', handleCancel);
-    btnOk.removeEventListener('click', handleOk);
-  };
-
-  const handleCancel = () => cleanup();
-  const handleOk = () => { cleanup(); onConfirm(); };
-
-  btnCancel.addEventListener('click', handleCancel);
-  btnOk.addEventListener('click', handleOk);
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-async function parseApiError(response, fallback = 'An error occurred') {
-  const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
-    try { const json = await response.json(); return json.detail || fallback; } catch (_) {}
-  }
-  try { const text = await response.text(); return text.trim() || fallback; } catch (_) {}
-  return fallback;
-}
-
-async function apiFetch(endpoint, options = {}) {
-  const headers = { ...options.headers };
-  headers['Authorization'] = `Bearer ${token}`;
-  if (!(options.body instanceof FormData) && typeof options.body === 'object') {
-    headers['Content-Type'] = 'application/json';
-    options.body = JSON.stringify(options.body);
-  }
-  
-  const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
-  if (!response.ok) {
-    if (response.status === 401) {
-      localStorage.clear();
-      window.location.href = '/static/index.html';
-    }
-    const errorMsg = await parseApiError(response, `Request failed: ${response.status}`);
-    throw new Error(errorMsg);
-  }
-  
-  const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
-    return response.json();
-  }
-  return null;
-}
-
-// ==================== DASHBOARD LOGIC ====================
-document.addEventListener('DOMContentLoaded', loadAdminDashboard);
-
-async function loadAdminDashboard() {
+// ==================== LOAD DASHBOARD DATA ====================
+async function loadCompanyDashboard() {
   try {
-    const [profile, docs, agents] = await Promise.all([
-      apiFetch('/company/profile'),
-      apiFetch('/documents/list').catch(() => []),
-      apiFetch('/company/agents').catch(() => [])
-    ]);
-
-    if (profile) {
-      document.getElementById('admin-company-name').textContent = profile.name;
-      document.getElementById('admin-company-email').textContent = profile.admin_email;
-      document.getElementById('setCareEmail').value = profile.customer_care_email || '';
-      if (profile.smtp_host) document.getElementById('setSmtpHost').value = profile.smtp_host;
-      if (profile.smtp_port) document.getElementById('setSmtpPort').value = profile.smtp_port;
-      if (profile.imap_host) document.getElementById('setImapHost').value = profile.imap_host;
-      if (profile.imap_port) document.getElementById('setImapPort').value = profile.imap_port;
+    const response = await fetch(`${API_BASE}/company/profile`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const profile = await response.json();
+      document.getElementById('companyTitle').textContent = `${profile.name}`;
+      document.getElementById('companyEmail').textContent = profile.admin_email;
+      
+      loadCompanyDocuments();
+      loadCompanyAgents();
+      loadEmailSettings();
+    } else {
+      showError('Failed to load company profile');
     }
-
-    renderAdminDocs(docs);
-    renderAdminAgents(agents);
   } catch (err) {
-    showToast('Failed to load dashboard: ' + err.message, 'error');
+    showError('Error: ' + err.message);
   }
 }
 
-function renderAdminDocs(docs) {
-  document.getElementById('admin-doc-count').textContent = docs.length;
-  const listEl = document.getElementById('admin-doc-list');
-  
-  if (docs.length === 0) {
-    listEl.innerHTML = `<div class="p-6 text-center text-slate-500 bg-slate-50 rounded-xl border border-slate-100 border-dashed">No policy documents uploaded yet.</div>`;
-    return;
-  }
-  
-  listEl.innerHTML = docs.map(doc => `
-    <div class="flex justify-between items-center p-3 sm:p-4 bg-white border border-slate-200 rounded-xl hover:border-slate-300 transition-colors shadow-sm">
-      <div class="flex items-center gap-3 overflow-hidden">
-        <i data-lucide="file" class="w-5 h-5 text-slate-400 shrink-0"></i>
-        <div class="min-w-0">
-          <p class="text-sm font-semibold text-slate-900 truncate">${escapeHtml(doc.file_name)}</p>
-          <p class="text-xs text-slate-500 mt-0.5">Uploaded ${new Date(doc.created_at).toLocaleDateString()}</p>
+// ==================== LOAD DOCUMENTS ====================
+async function loadCompanyDocuments() {
+  try {
+    const response = await fetch(`${API_BASE}/documents/list`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const docs = await response.json();
+      document.getElementById('docCount').textContent = docs.length;
+      const listEl = document.getElementById('documentsList');
+      
+      if (docs.length === 0) {
+        listEl.innerHTML = '<p class="empty-state">No documents yet. Upload your first policy document above.</p>';
+        return;
+      }
+      
+      listEl.innerHTML = docs.map(doc => `
+        <div class="item-card">
+          <div class="item-info">
+            <div class="item-name">📄 ${doc.file_name}</div>
+            <div class="item-date">${new Date(doc.created_at).toLocaleDateString()}</div>
+          </div>
+          <button class="btn-delete" onclick="deleteDocument(${doc.id})">Delete</button>
         </div>
-      </div>
-      <button class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0" onclick="deleteDocument(${doc.id})">
-        <i data-lucide="trash-2" class="w-4 h-4"></i>
-      </button>
-    </div>
-  `).join('');
-  refreshIcons();
+      `).join('');
+    }
+  } catch (err) {
+    console.error('Failed to load documents:', err);
+  }
 }
 
-function renderAdminAgents(agents) {
-  document.getElementById('admin-agent-count').textContent = agents.length;
-  const listEl = document.getElementById('admin-agent-list');
-  
-  if (agents.length === 0) {
-    listEl.innerHTML = `<li class="p-6 text-center text-slate-500">No support agents registered yet.</li>`;
-    return;
+async function parseApiError(response, fallbackMessage) {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    try {
+      const errorJson = await response.json();
+      if (errorJson && typeof errorJson.detail === 'string' && errorJson.detail.trim()) {
+        return errorJson.detail;
+      }
+    } catch (_) {
+      // Fall back to text parsing below when JSON is malformed.
+    }
   }
 
-  listEl.innerHTML = agents.map(agent => `
-    <li class="p-4 sm:p-5 flex justify-between items-center hover:bg-slate-50/50 transition-colors">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex justify-center items-center font-bold text-xs">
-          ${escapeHtml(agent.username.substring(0, 2).toUpperCase())}
-        </div>
-        <div>
-          <p class="text-sm font-semibold text-slate-900">${escapeHtml(agent.username)}</p>
-          <p class="text-xs text-slate-500">${escapeHtml(agent.email)}</p>
-        </div>
-      </div>
-      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${agent.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-        ${agent.is_active ? 'Active' : 'Inactive'}
-      </span>
-    </li>
-  `).join('');
+  try {
+    const text = await response.text();
+    if (text && text.trim()) {
+      return text;
+    }
+  } catch (_) {
+    // Ignore parse failure and return fallback.
+  }
+
+  return fallbackMessage;
 }
 
-// Upload Actions
-document.getElementById('docFileInput').addEventListener('change', async (e) => {
+// ==================== UPLOAD DOCUMENT ====================
+document.getElementById('fileInput')?.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   
   const formData = new FormData();
   formData.append('file', file);
   
-  showToast('Uploading document...', 'info');
+  const statusEl = document.getElementById('uploadStatus');
+  
   try {
-    await apiFetch('/documents/upload', { method: 'POST', body: formData });
-    showToast('Document uploaded successfully', 'success');
-    e.target.value = '';
-    const docs = await apiFetch('/documents/list');
-    renderAdminDocs(docs);
-  } catch (err) {
-    showToast('Upload failed: ' + err.message, 'error');
-  }
-});
-
-window.deleteDocument = (docId) => {
-  showConfirm('Delete Document', 'Are you sure you want to delete this policy document? It will no longer be used for auto-resolution.', async () => {
-    try {
-      await apiFetch(`/documents/${docId}`, { method: 'DELETE' });
-      showToast('Document deleted', 'success');
-      const docs = await apiFetch('/documents/list');
-      renderAdminDocs(docs);
-    } catch (err) {
-      showToast('Delete failed: ' + err.message, 'error');
-    }
-  });
-};
-
-// Settings Update
-document.getElementById('form-admin-settings').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  try {
-    await apiFetch('/company/settings', {
+    const response = await fetch(`${API_BASE}/documents/upload`, {
       method: 'POST',
-      body: {
-        customer_care_email: document.getElementById('setCareEmail').value,
-        smtp_host: document.getElementById('setSmtpHost').value,
-        smtp_port: parseInt(document.getElementById('setSmtpPort').value) || 587,
-        imap_host: document.getElementById('setImapHost').value,
-        imap_port: parseInt(document.getElementById('setImapPort').value) || 993
-      }
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
     });
-    showToast('Settings saved successfully', 'success');
+    
+    if (response.ok) {
+      statusEl.textContent = '✅ Document uploaded successfully!';
+      statusEl.className = 'status-message success';
+      document.getElementById('fileInput').value = '';
+      loadCompanyDocuments();
+      setTimeout(() => {
+        statusEl.textContent = '';
+      }, 3000);
+    } else {
+      const errorMessage = await parseApiError(response, 'Upload failed');
+      statusEl.textContent = '❌ ' + errorMessage;
+      statusEl.className = 'status-message error';
+    }
   } catch (err) {
-    showToast('Update failed: ' + err.message, 'error');
+    statusEl.textContent = '❌ ' + err.message;
+    statusEl.className = 'status-message error';
   }
 });
 
-// Logout
-document.getElementById('logoutBtn').addEventListener('click', () => {
-  showConfirm('Log Out', 'Are you sure you want to log out of your session?', () => {
-    localStorage.clear();
-    window.location.href = '/static/index.html';
-  });
+// ==================== DELETE DOCUMENT ====================
+async function deleteDocument(docId) {
+  if (!confirm('Delete this document?')) return;
+  
+  try {
+    const response = await fetch(`${API_BASE}/documents/${docId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      loadCompanyDocuments();
+    } else {
+      alert('Delete failed');
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+// ==================== LOAD AGENTS ====================
+async function loadCompanyAgents() {
+  try {
+    const response = await fetch(`${API_BASE}/company/agents`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const agents = await response.json();
+      document.getElementById('agentCount').textContent = agents.length;
+      const listEl = document.getElementById('agentsList');
+      
+      if (agents.length === 0) {
+        listEl.innerHTML = '<p class="empty-state">No agents registered yet. They\'ll appear here when they sign up.</p>';
+        return;
+      }
+      
+      listEl.innerHTML = agents.map(agent => `
+        <div class="item-card">
+          <div class="item-info">
+            <div class="item-name">👤 ${agent.username}</div>
+            <div class="item-email">${agent.email}</div>
+          </div>
+          <span class="badge ${agent.is_active ? 'active' : 'inactive'}">
+            ${agent.is_active ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+      `).join('');
+    }
+  } catch (err) {
+    console.error('Failed to load agents:', err);
+  }
+}
+
+// ==================== LOAD EMAIL SETTINGS ====================
+async function loadEmailSettings() {
+  try {
+    const response = await fetch(`${API_BASE}/company/profile`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const profile = await response.json();
+      document.getElementById('settingsCareEmail').value = profile.customer_care_email;
+      // Note: API doesn't return SMTP/IMAP settings for security reasons
+    }
+  } catch (err) {
+    console.error('Failed to load settings:', err);
+  }
+}
+
+// ==================== UPDATE SETTINGS ====================
+document.getElementById('updateSettingsBtn')?.addEventListener('click', async () => {
+  const updates = {
+    customer_care_email: document.getElementById('settingsCareEmail').value,
+    smtp_host: document.getElementById('settingsSmtpHost').value,
+    smtp_port: parseInt(document.getElementById('settingsSmtpPort').value) || 587,
+    imap_host: document.getElementById('settingsImapHost').value,
+    imap_port: parseInt(document.getElementById('settingsImapPort').value) || 993
+  };
+  
+  try {
+    const response = await fetch(`${API_BASE}/company/settings`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updates)
+    });
+    
+    const statusEl = document.getElementById('settingsStatus');
+    if (response.ok) {
+      statusEl.textContent = '✅ Settings updated successfully!';
+      statusEl.className = 'status-message success';
+      setTimeout(() => {
+        statusEl.textContent = '';
+      }, 3000);
+    } else {
+      const errorMessage = await parseApiError(response, 'Update failed');
+      statusEl.textContent = '❌ ' + errorMessage;
+      statusEl.className = 'status-message error';
+    }
+  } catch (err) {
+    const statusEl = document.getElementById('settingsStatus');
+    statusEl.textContent = '❌ ' + err.message;
+    statusEl.className = 'status-message error';
+  }
 });
+
+// ==================== LOGOUT ====================
+document.getElementById('logoutBtn')?.addEventListener('click', () => {
+  if (!confirm('Logout?')) return;
+  
+  localStorage.removeItem('cc_token');
+  localStorage.removeItem('cc_role');
+  localStorage.removeItem('cc_company_id');
+  
+  window.location.href = '/static/index.html';
+});
+
+// ==================== HELPER FUNCTIONS ====================
+function showError(message) {
+  console.error(message);
+  alert(message);
+}

@@ -1,9 +1,9 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from auth import (
+from app.auth import (
     authenticate_company_admin,
     create_access_token,
     get_current_company,
@@ -11,10 +11,10 @@ from auth import (
     get_password_hash,
     require_roles,
 )
-from database import get_db
-from models import Company, CompanyDocument, SupportUser
-from pinecone_client import build_company_namespace
-from schemas import (
+from app.database import get_db
+from app.models import Company, CompanyDocument, SupportUser
+from app.pinecone_client import build_company_namespace
+from app.schemas import (
     CompanyAdminLoginRequest,
     CompanyAdminRegisterRequest,
     CompanyProfileResponse,
@@ -167,4 +167,3 @@ def update_company_settings(
 
     db.commit()
     return {"message": "Settings updated successfully"}
-
