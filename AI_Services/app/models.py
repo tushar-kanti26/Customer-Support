@@ -1,9 +1,9 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.database import Base
+from database import Base
 
 
 class SupportUser(Base):
@@ -76,3 +76,4 @@ class CompanyDocument(Base):
         ForeignKey("support_users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+

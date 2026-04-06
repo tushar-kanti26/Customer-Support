@@ -1,12 +1,12 @@
-import json
+﻿import json
 import re
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, StateGraph
 
-from app.agent.state import EmailState
-from app.config import settings
-from app.pinecone_client import retrieve_context
+from agent.state import EmailState
+from config import settings
+from pinecone_client import retrieve_context
 
 
 _llm: ChatGoogleGenerativeAI | None = None
@@ -159,3 +159,4 @@ def build_graph():
 
 
 agent_graph = build_graph()
+

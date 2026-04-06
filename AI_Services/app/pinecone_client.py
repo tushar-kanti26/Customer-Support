@@ -1,7 +1,7 @@
-from pinecone import Pinecone
+﻿from pinecone import Pinecone
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-from app.config import settings
+from config import settings
 
 
 _client: Pinecone | None = None
@@ -116,3 +116,4 @@ def retrieve_context(query: str, namespace: str | None = None) -> list[str]:
     except Exception:
         # Retrieval failures should not block ticket creation.
         return []
+

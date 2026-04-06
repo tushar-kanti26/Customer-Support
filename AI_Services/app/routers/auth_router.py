@@ -1,17 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+﻿from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.auth import (
+from auth import (
     authenticate_human_agent_by_username,
     create_access_token,
     get_current_user,
     get_password_hash,
 )
-from app.database import get_db
-from app.models import Company, SupportUser
-from app.schemas import (
+from database import get_db
+from models import Company, SupportUser
+from schemas import (
     HumanAgentRegisterRequest,
     HumanAgentSimpleLoginRequest,
     SupportAgentRead,
@@ -133,3 +133,4 @@ def login_human(payload: HumanAgentSimpleLoginRequest, db: Session = Depends(get
 @router.get("/me", response_model=SupportAgentRead)
 def me(current_user: SupportUser = Depends(get_current_user)):
     return current_user
+

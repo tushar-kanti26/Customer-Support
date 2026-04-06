@@ -1,13 +1,13 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_company, get_current_user, require_roles
-from app.database import get_db
-from app.email_client import send_email_reply
-from app.models import Company, SupportUser, UnresolvedTicket
-from app.schemas import TicketRead, TicketUpdate
+from auth import get_current_company, get_current_user, require_roles
+from database import get_db
+from email_client import send_email_reply
+from models import Company, SupportUser, UnresolvedTicket
+from schemas import TicketRead, TicketUpdate
 
 
 router = APIRouter(prefix="/api/tickets", tags=["tickets"])
@@ -82,3 +82,4 @@ def update_ticket(
     db.refresh(ticket)
 
     return ticket
+

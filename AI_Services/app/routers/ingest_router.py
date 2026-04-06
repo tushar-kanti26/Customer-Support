@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends
+﻿from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_company, require_roles
-from app.database import get_db
-from app.models import Company, SupportUser
-from app.schemas import PollResult, PollStatus
-from app.services.email_processor import poll_inbox_once
-from app.services.polling_status import get_poll_status
+from auth import get_current_company, require_roles
+from database import get_db
+from models import Company, SupportUser
+from schemas import PollResult, PollStatus
+from services.email_processor import poll_inbox_once
+from services.polling_status import get_poll_status
 
 
 router = APIRouter(prefix="/api/ingest", tags=["ingest"])
@@ -25,3 +25,4 @@ def poll_and_process(
 @router.get("/status", response_model=PollStatus)
 def poll_status():
     return PollStatus(**get_poll_status())
+

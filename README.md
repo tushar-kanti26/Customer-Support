@@ -130,3 +130,25 @@ The built-in web console now supports:
 - Add audit logs and role-based permissions.
 - Secure email credentials via secret manager.
 - Add robust JSON parsing in `graph.py` and guardrails for AI outputs.
+
+## Render Deployment (Production)
+
+Use `AI_Services/app` as the service root directory.
+
+- Root directory: `AI_Services/app`
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- Health check path: `/health`
+
+Required environment variables:
+
+- `DATABASE_URL` (from Render PostgreSQL connection string)
+- `SECRET_KEY`
+- `GEMINI_API_KEY`
+- `PINECONE_API_KEY`
+- `PINECONE_INDEX_NAME`
+
+Recommended production values:
+
+- `DEBUG_MODE=false`
+- `AUTO_POLL_ENABLED=false`

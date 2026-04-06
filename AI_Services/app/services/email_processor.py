@@ -1,15 +1,15 @@
-from datetime import datetime
+﻿from datetime import datetime
 import hashlib
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.agent.graph import agent_graph
-from app.email_client import fetch_unseen_emails
-from app.email_client import mark_email_seen
-from app.email_client import send_email_reply
-from app.models import Company, UnresolvedTicket
-from app.services.polling_status import record_poll_error, record_poll_result
+from agent.graph import agent_graph
+from email_client import fetch_unseen_emails
+from email_client import mark_email_seen
+from email_client import send_email_reply
+from models import Company, UnresolvedTicket
+from services.polling_status import record_poll_error, record_poll_result
 
 
 def _clip(value: str, max_len: int) -> str:
@@ -246,3 +246,4 @@ def poll_inbox_once(db: Session, company: Company, max_count: int = 20) -> tuple
 
     record_poll_result(len(emails), auto_resolved, escalated)
     return len(emails), auto_resolved, escalated
+

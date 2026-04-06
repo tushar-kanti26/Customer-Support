@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     pinecone_namespace: str = "default"
     top_k_docs: int = 5
 
-    database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/customer_care"
+    database_url: str = "postgresql://email_db_mvyb_user:rF2L9Y8T4ALSxhGJV27VSI6PIbfvqIno@dpg-d79l4rp4tr6s73cvrlfg-a.oregon-postgres.render.com/email_db_mvyb"
 
     imap_host: str = "imap.gmail.com"
     imap_port: int = 993

@@ -1,7 +1,7 @@
-from sqlalchemy import create_engine
+﻿from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from app.config import settings
+from config import settings
 
 
 # PostgreSQL-optimized engine configuration
@@ -23,3 +23,4 @@ def get_db():
         yield db
     finally:
         db.close()
+

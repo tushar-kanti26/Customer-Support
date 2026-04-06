@@ -1,4 +1,4 @@
-from io import BytesIO
+﻿from io import BytesIO
 from pathlib import Path
 
 from PyPDF2 import PdfReader
@@ -6,11 +6,11 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_company, get_current_user, require_roles
-from app.database import get_db
-from app.models import Company, CompanyDocument, SupportUser
-from app.pinecone_client import build_company_namespace, delete_policy_document, upsert_policy_documents
-from app.schemas import DocumentListResponse, DocumentUploadResponse
+from auth import get_current_company, get_current_user, require_roles
+from database import get_db
+from models import Company, CompanyDocument, SupportUser
+from pinecone_client import build_company_namespace, delete_policy_document, upsert_policy_documents
+from schemas import DocumentListResponse, DocumentUploadResponse
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -169,3 +169,4 @@ def get_document_content(
         raise HTTPException(status_code=404, detail="Document not found")
 
     return {"id": doc.id, "file_name": doc.file_name, "content": doc.file_content}
+

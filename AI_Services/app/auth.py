@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+﻿from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -7,9 +7,9 @@ from passlib.context import CryptContext
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.config import settings
-from app.database import get_db
-from app.models import Company, SupportUser
+from config import settings
+from database import get_db
+from models import Company, SupportUser
 
 
 # Prefer pbkdf2 for local stability; keep bcrypt verification for backward compatibility.
@@ -129,3 +129,4 @@ def require_roles(*roles: str):
         return user
 
     return _role_guard
+

@@ -1,4 +1,4 @@
-import threading
+﻿import threading
 from pathlib import Path
 
 from fastapi import Depends, FastAPI
@@ -7,17 +7,17 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
-from app.config import settings
-from app.database import Base, SessionLocal, engine, get_db
-from app.email_client import close_imap_sessions
-from app.models import Company
-from app.pinecone_client import build_company_namespace
-from app.routers.auth_router import router as auth_router
-from app.routers.ingest_router import router as ingest_router
-from app.routers.tickets_router import router as tickets_router
-from app.routers.company_router import router as company_router
-from app.routers.documents_router import router as documents_router
-from app.services.email_processor import poll_inbox_once
+from config import settings
+from database import Base, SessionLocal, engine, get_db
+from email_client import close_imap_sessions
+from models import Company
+from pinecone_client import build_company_namespace
+from routers.auth_router import router as auth_router
+from routers.ingest_router import router as ingest_router
+from routers.tickets_router import router as tickets_router
+from routers.company_router import router as company_router
+from routers.documents_router import router as documents_router
+from services.email_processor import poll_inbox_once
 
 
 app = FastAPI(title=settings.app_name)
@@ -247,3 +247,4 @@ def root():
 def health(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
     return {"status": "ok"}
+
