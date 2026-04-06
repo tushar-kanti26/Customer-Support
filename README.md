@@ -1,5 +1,7 @@
 # ResolveX (LangGraph + Pinecone + Postgres)
 
+## Live: https://customer-support-ewuu.onrender.com/static/admin-dashboard.html
+
 This project is an AI-powered customer support resolution system with:
 
 - Email ingestion from company inbox (IMAP)
