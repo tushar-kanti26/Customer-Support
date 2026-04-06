@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ResolveX - Agent Dashboard</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20260403b" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+          },
+          colors: {
+            brand: { 50: '#eff4ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen relative overflow-x-hidden selection:bg-brand-100 selection:text-brand-900">
+
+  <!-- Background Decorative Shapes -->
+  <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+    <div class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-brand-500/10 mix-blend-multiply filter blur-3xl"></div>
+    <div class="absolute top-[20%] -right-[10%] w-[40%] h-[60%] rounded-full bg-cyan-500/10 mix-blend-multiply filter blur-3xl"></div>
+    <div class="absolute -bottom-[20%] left-[20%] w-[60%] h-[50%] rounded-full bg-purple-500/10 mix-blend-multiply filter blur-3xl"></div>
+    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgxNSwgMjMsIDQyLCAwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] [mask-image:linear-gradient(to_bottom,white,transparent)]"></div>
+  </div>
+
+  <!-- Toast & Modals -->
+  <div id="toast-container" class="fixed top-6 right-6 z-50 flex flex-col gap-3 w-80 max-w-[calc(100vw-3rem)]"></div>
+
+  <div id="confirm-modal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 fade-in">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden slide-up">
+      <div class="p-6">
+        <h3 id="confirm-title" class="text-xl font-display font-semibold text-slate-900 mb-2">Confirm Action</h3>
+        <p id="confirm-message" class="text-slate-600">Are you sure you want to proceed?</p>
+      </div>
+      <div class="px-6 py-4 bg-slate-50 flex justify-end gap-3 border-t border-slate-100">
+        <button id="confirm-cancel" class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Cancel</button>
+        <button id="confirm-ok" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors shadow-sm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="min-h-screen flex flex-col fade-in">
+    <!-- Top Nav -->
+    <nav class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
+              <i data-lucide="headset" class="w-5 h-5 text-brand-300"></i>
+            </div>
+            <div class="flex flex-col">
+              <span class="font-display font-bold leading-tight">Support Console</span>
+              <span id="agent-user-name" class="text-xs text-slate-400 leading-tight">Welcome, Agent</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="btn-agent-refresh" class="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-sm font-medium rounded-lg transition-colors">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              <span class="hidden sm:inline">Sync Inbox</span>
+            </button>
+            <div class="w-px h-6 bg-white/20 mx-1"></div>
+            <button id="logoutBtn" class="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Logout">
+              <i data-lucide="log-out" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 bg-transparent">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 slide-up">
+          <div>
+            <h1 id="agent-view-title" class="text-2xl font-bold text-slate-900">Unresolved Tickets</h1>
+            <p id="agent-sync-status" class="text-sm text-slate-500 mt-1">Ready</p>
+          </div>
+          
+          <!-- Filters -->
+          <div class="flex bg-slate-200/60 p-1 rounded-xl w-full sm:w-auto" id="ticket-filters">
+            <button class="flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-white text-slate-900 shadow-sm ticket-filter-btn" data-filter="unresolved">Action Required</button>
+            <button class="flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-slate-600 hover:text-slate-900 ticket-filter-btn" data-filter="replied">Replied</button>
+            <button class="flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-slate-600 hover:text-slate-900 ticket-filter-btn" data-filter="all">All</button>
+          </div>
+        </div>
+
+        <!-- Tickets Container -->
+        <div id="agent-ticket-list" class="space-y-4 pb-12 slide-up" style="animation-delay: 0.1s;">
+          <div class="text-center py-12">
+            <div class="inline-block w-8 h-8 border-4 border-slate-200 border-t-brand-500 rounded-full animate-spin"></div>
+            <p class="text-slate-500 mt-4 text-sm font-medium">Loading tickets...</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/agent-dashboard.js?v=20260403b"></script>
+</body>
+</html>

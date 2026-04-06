@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ResolveX - Admin Dashboard</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20260403b" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+          },
+          colors: {
+            brand: { 50: '#eff4ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen relative overflow-x-hidden selection:bg-brand-100 selection:text-brand-900">
+
+  <!-- Background Decorative Shapes -->
+  <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+    <div class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-brand-500/10 mix-blend-multiply filter blur-3xl"></div>
+    <div class="absolute top-[20%] -right-[10%] w-[40%] h-[60%] rounded-full bg-cyan-500/10 mix-blend-multiply filter blur-3xl"></div>
+    <div class="absolute -bottom-[20%] left-[20%] w-[60%] h-[50%] rounded-full bg-purple-500/10 mix-blend-multiply filter blur-3xl"></div>
+    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgxNSwgMjMsIDQyLCAwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] [mask-image:linear-gradient(to_bottom,white,transparent)]"></div>
+  </div>
+
+  <!-- Toast & Modals -->
+  <div id="toast-container" class="fixed top-6 right-6 z-50 flex flex-col gap-3 w-80 max-w-[calc(100vw-3rem)]"></div>
+
+  <div id="confirm-modal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 fade-in">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden slide-up">
+      <div class="p-6">
+        <h3 id="confirm-title" class="text-xl font-display font-semibold text-slate-900 mb-2">Confirm Action</h3>
+        <p id="confirm-message" class="text-slate-600">Are you sure you want to proceed?</p>
+      </div>
+      <div class="px-6 py-4 bg-slate-50 flex justify-end gap-3 border-t border-slate-100">
+        <button id="confirm-cancel" class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Cancel</button>
+        <button id="confirm-ok" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors shadow-sm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="min-h-screen pb-12 fade-in">
+    <!-- Top Nav -->
+    <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shadow-md shadow-brand-500/20">
+              <i data-lucide="building-2" class="w-5 h-5 text-white"></i>
+            </div>
+            <div class="flex flex-col">
+              <span id="admin-company-name" class="font-display font-bold text-slate-900 leading-tight">Loading...</span>
+              <span id="admin-company-email" class="text-xs text-slate-500 leading-tight"></span>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="hidden sm:inline-flex px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200">Company Admin</span>
+            <button id="logoutBtn" class="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Logout">
+              <i data-lucide="log-out" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Column 1 & 2: Documents & Agents -->
+        <div class="lg:col-span-2 space-y-8">
+          <!-- Documents Section -->
+          <section class="glass-panel border border-slate-200 rounded-2xl shadow-sm overflow-hidden slide-up">
+            <div class="p-5 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                  <i data-lucide="file-text" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h2 class="text-lg font-bold text-slate-900">Policy Documents</h2>
+                  <p class="text-sm text-slate-500">Knowledge base for auto-resolution.</p>
+                </div>
+              </div>
+              <div class="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-sm font-semibold border border-slate-200">
+                <span id="admin-doc-count">0</span> files
+              </div>
+            </div>
+            
+            <div class="p-5 sm:p-6">
+              <div class="mb-6">
+                <input type="file" id="docFileInput" class="hidden" accept=".pdf,.txt,.md,.csv,.log">
+                <label for="docFileInput" class="flex flex-col items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-slate-300 border-dashed rounded-xl appearance-none cursor-pointer hover:border-brand-400 hover:bg-brand-50 focus:outline-none">
+                    <span class="flex items-center space-x-2">
+                        <i data-lucide="upload-cloud" class="w-6 h-6 text-slate-400"></i>
+                        <span class="font-medium text-slate-600">Drop files to Attach, or <span class="text-brand-600 underline">browse</span></span>
+                    </span>
+                </label>
+              </div>
+              <div id="admin-doc-list" class="space-y-3">
+                <div class="text-center py-6 text-slate-500 text-sm">Loading documents...</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Agents Section -->
+          <section class="glass-panel border border-slate-200 rounded-2xl shadow-sm overflow-hidden slide-up" style="animation-delay: 0.1s;">
+            <div class="p-5 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600">
+                  <i data-lucide="users" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h2 class="text-lg font-bold text-slate-900">Support Agents</h2>
+                  <p class="text-sm text-slate-500">Registered staff members.</p>
+                </div>
+              </div>
+              <div class="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-sm font-semibold border border-slate-200">
+                <span id="admin-agent-count">0</span> agents
+              </div>
+            </div>
+            
+            <div class="p-0">
+              <ul id="admin-agent-list" class="divide-y divide-slate-100">
+                <li class="p-6 text-center text-slate-500 text-sm">Loading agents...</li>
+              </ul>
+            </div>
+          </section>
+        </div>
+
+        <!-- Column 3: Settings -->
+        <div class="space-y-8">
+          <section class="glass-panel border border-slate-200 rounded-2xl shadow-sm overflow-hidden slide-up" style="animation-delay: 0.2s;">
+            <div class="p-5 sm:p-6 border-b border-slate-100 flex items-center gap-3 bg-white/50">
+              <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+              </div>
+              <h2 class="text-lg font-bold text-slate-900">Email Settings</h2>
+            </div>
+            
+            <div class="p-5 sm:p-6">
+              <form id="form-admin-settings" class="space-y-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Customer Care Email</label>
+                  <input type="email" id="setCareEmail" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                </div>
+                
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="col-span-2">
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">SMTP Host</label>
+                    <input type="text" id="setSmtpHost" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Port</label>
+                    <input type="number" id="setSmtpPort" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="col-span-2">
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">IMAP Host</label>
+                    <input type="text" id="setImapHost" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Port</label>
+                    <input type="number" id="setImapPort" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                  </div>
+                </div>
+
+                <button type="submit" class="w-full mt-2 py-2 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-lg transition-colors flex justify-center items-center gap-2">
+                  <i data-lucide="save" class="w-4 h-4"></i> Save Settings
+                </button>
+              </form>
+            </div>
+          </section>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/admin-dashboard.js?v=20260403b"></script>
+</body>
+</html>

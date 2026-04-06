@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ResolveX - Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css?v=20260403b" />
+</head>
+<body>
+  <div class="bg-shape bg-a"></div>
+  <div class="bg-shape bg-b"></div>
+
+  <main class="auth-shell">
+    <section class="auth-intro panel">
+      <p class="eyebrow">ResolveX customer care</p>
+      <h1>Professional support operations for modern teams.</h1>
+      <p class="hero-copy">
+        Manage company access, customer email workflows, and support tickets from a clean, focused workspace.
+      </p>
+
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-title">Company control</span>
+          <span class="feature-copy">Centralized admin access for policies, agents, and email setup.</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-title">Agent workflow</span>
+          <span class="feature-copy">A direct view of tickets, replies, and resolution notes.</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-title">Secure onboarding</span>
+          <span class="feature-copy">Clear authentication paths without clutter or mixed messaging.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel login-container auth-card">
+      <div class="login-header">
+        <div>
+          <h2>Sign in</h2>
+          <p>Choose the role that matches your access level.</p>
+        </div>
+      </div>
+
+      <div class="role-tabs" role="tablist" aria-label="Authentication options">
+        <button class="tab-btn active" data-tab="company-login" type="button" role="tab" aria-selected="true">Company Admin</button>
+        <button class="tab-btn" data-tab="company-register" type="button" role="tab" aria-selected="false">Register Company</button>
+        <button class="tab-btn" data-tab="agent-login" type="button" role="tab" aria-selected="false">Support Agent</button>
+      </div>
+
+      <!-- COMPANY ADMIN LOGIN -->
+      <div class="tab-content active" id="company-login" role="tabpanel">
+        <h3>Company Admin Login</h3>
+        <form id="companyLoginForm" class="auth-form">
+          <div class="field-group">
+            <label for="companyAdminEmail">Email</label>
+            <input type="email" id="companyAdminEmail" placeholder="admin@company.com" autocomplete="email" required />
+          </div>
+          <div class="field-group">
+            <label for="companyAdminPassword">Password</label>
+            <input type="password" id="companyAdminPassword" placeholder="Enter password" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="btn-primary">Login</button>
+        </form>
+        <p id="companyLoginError" class="error-msg" hidden></p>
+      </div>
+
+      <!-- COMPANY REGISTRATION -->
+      <div class="tab-content" id="company-register" role="tabpanel">
+        <h3>Register Your Company</h3>
+        <p class="section-note">Set up the company account and email connection in one flow.</p>
+        <form id="companyRegisterForm" class="auth-form">
+          <div class="field-group">
+            <label for="companyName">Company Name</label>
+            <input type="text" id="companyName" placeholder="Acme Inc." autocomplete="organization" required />
+          </div>
+
+          <div class="field-group">
+            <label for="adminEmail">Admin Email</label>
+            <input type="email" id="adminEmail" placeholder="admin@company.com" autocomplete="email" required />
+          </div>
+
+          <div class="field-group">
+            <label for="adminUsername">Admin Username</label>
+            <input type="text" id="adminUsername" placeholder="admin_user" autocomplete="username" required />
+          </div>
+
+          <div class="field-group">
+            <label for="adminPassword">Password</label>
+            <input type="password" id="adminPassword" placeholder="Create password" autocomplete="new-password" required />
+          </div>
+
+          <div class="section-divider"></div>
+
+          <div class="section-heading">
+            <h4>Email Configuration</h4>
+            <p>For reading customer emails and sending replies.</p>
+          </div>
+
+          <div class="field-group">
+            <label for="customerCareEmail">Customer Care Email</label>
+            <input type="email" id="customerCareEmail" placeholder="support@company.com" autocomplete="email" required />
+          </div>
+
+          <div class="field-group">
+            <label for="emailAppPassword">Email App Password</label>
+            <input type="password" id="emailAppPassword" placeholder="Gmail app-specific password" autocomplete="new-password" required />
+            <small class="field-hint">For Gmail: use an app password with 2FA enabled.</small>
+          </div>
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label for="imapHost">IMAP Host</label>
+              <input type="text" id="imapHost" placeholder="imap.gmail.com" value="imap.gmail.com" />
+            </div>
+            <div class="field-group">
+              <label for="imapPort">IMAP Port</label>
+              <input type="number" id="imapPort" placeholder="993" value="993" />
+            </div>
+            <div class="field-group">
+              <label for="smtpHost">SMTP Host</label>
+              <input type="text" id="smtpHost" placeholder="smtp.gmail.com" value="smtp.gmail.com" />
+            </div>
+            <div class="field-group">
+              <label for="smtpPort">SMTP Port</label>
+              <input type="number" id="smtpPort" placeholder="587" value="587" />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary">Register Company</button>
+        </form>
+        <p id="companyRegisterError" class="error-msg" hidden></p>
+      </div>
+
+      <!-- SUPPORT AGENT LOGIN -->
+      <div class="tab-content" id="agent-login" role="tabpanel">
+        <h3>Support Agent Login</h3>
+        <form id="agentLoginForm" class="auth-form">
+          <div class="field-group">
+            <label for="agentCompanyEmail">Company Email <span class="label-subtle">optional</span></label>
+            <input type="email" id="agentCompanyEmail" placeholder="support@company.com" autocomplete="email" />
+          </div>
+          <div class="field-group">
+            <label for="agentUsername">Username</label>
+            <input type="text" id="agentUsername" placeholder="agent_username" autocomplete="username" required />
+          </div>
+          <div class="field-group">
+            <label for="agentPassword">Password</label>
+            <input type="password" id="agentPassword" placeholder="Enter password" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="btn-primary">Login</button>
+        </form>
+        <p id="agentLoginError" class="error-msg" hidden></p>
+
+        <div class="section-divider"></div>
+
+        <h3>New Support Agent?</h3>
+        <p class="section-note">Register only if your company has enabled self-service onboarding.</p>
+        <form id="agentRegisterForm" class="auth-form">
+          <div class="field-group">
+            <label for="agentRegisterCompanyEmail">Company Email</label>
+            <input type="email" id="agentRegisterCompanyEmail" placeholder="support@company.com" autocomplete="email" required />
+          </div>
+          <div class="field-group">
+            <label for="agentRegisterUsername">Username</label>
+            <input type="text" id="agentRegisterUsername" placeholder="agent_username" autocomplete="username" required />
+          </div>
+          <div class="field-group">
+            <label for="agentRegisterPassword">Password</label>
+            <input type="password" id="agentRegisterPassword" placeholder="Create password" autocomplete="new-password" required />
+          </div>
+          <button type="submit" class="btn-secondary">Register as Support Agent</button>
+        </form>
+        <p id="agentRegisterError" class="error-msg" hidden></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/login.js?v=20260403b"></script>
+</body>
+</html>
