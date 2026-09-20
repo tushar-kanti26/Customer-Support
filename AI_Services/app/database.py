@@ -3,7 +3,9 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.config import settings
 
-
+"""
+  This files contains the database engine and the necessary configuration for the Postgres database. Its contains the sessionmaker to initialiazing connection to the database.
+"""
 # PostgreSQL-optimized engine configuration
 engine_kwargs = {
     "future": True,

@@ -1,4 +1,5 @@
 from datetime import datetime
+import hashlib
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -20,6 +21,7 @@ def _clip(value: str, max_len: int) -> str:
 
 def _new_ticket(
     company_id: int,
+    source_message_id: str,
     sender_email: str,
     subject: str,
     body: str,
@@ -31,6 +33,7 @@ def _new_ticket(
 ) -> UnresolvedTicket:
     return UnresolvedTicket(
         company_id=company_id,
+        source_message_id=_clip(source_message_id, 255),
         sender_email=_clip(sender_email, 255),
         subject=_clip(subject, 255),
         body=(body or "").replace("\x00", ""),
@@ -42,6 +45,30 @@ def _new_ticket(
     )
 
 
+def _build_message_key(email_data: dict[str, str]) -> str:
+    candidate = (email_data.get("dedupe_key") or email_data.get("message_id") or "").strip()
+    if candidate:
+        return candidate
+    raw = f"{email_data.get('from', '').strip()}|{email_data.get('subject', '').strip()}|{email_data.get('body', '').strip()}"
+    digest = hashlib.sha256(raw.encode("utf-8", errors="ignore")).hexdigest()
+    return f"content-hash:{digest}"
+
+
+def _existing_ticket_outcome(db: Session, company_id: int, source_message_id: str) -> str | None:
+    existing = (
+        db.query(UnresolvedTicket)
+        .filter(
+            UnresolvedTicket.company_id == company_id,
+            UnresolvedTicket.source_message_id == source_message_id,
+        )
+        .order_by(UnresolvedTicket.id.desc())
+        .first()
+    )
+    if not existing:
+        return None
+    return "auto_resolved" if existing.status == "resolved" else "escalated"
+
+
 def _save_ticket(db: Session, ticket: UnresolvedTicket) -> None:
     db.add(ticket)
     try:
@@ -51,7 +78,38 @@ def _save_ticket(db: Session, ticket: UnresolvedTicket) -> None:
         raise
 
 
+def _send_escalation_acknowledgement(
+    email_data: dict[str, str],
+    company: Company,
+    ticket: UnresolvedTicket,
+) -> None:
+    ticket_ref = f"#{ticket.id}" if getattr(ticket, "id", None) is not None else ""
+    ticket_line = f"Your ticket {ticket_ref} has been created." if ticket_ref else "Your message ticket has been created."
+
+    send_email_reply(
+        to_email=email_data["from"],
+        subject=f"Re: {email_data['subject']}",
+        body=(
+            "Hello,\n\n"
+            f"{ticket_line} "
+            "Our system expert will review your issue and resolve it as soon as possible.\n\n"
+            "Regards,\nResolveX Team"
+        ),
+        from_email=company.customer_care_email,
+        email_password=company.customer_care_app_password,
+        smtp_host=company.smtp_host,
+        smtp_port=company.smtp_port,
+        smtp_use_tls=company.smtp_use_tls,
+    )
+
+
 def process_email(db: Session, email_data: dict[str, str], company: Company) -> str:
+    source_message_id = _build_message_key(email_data)
+    duplicate_outcome = _existing_ticket_outcome(db, company.id, source_message_id)
+    if duplicate_outcome:
+        # Message already ingested for this company.
+        return duplicate_outcome
+
     initial_state = {
         "sender_email": email_data["from"],
         "subject": email_data["subject"],
@@ -70,6 +128,7 @@ def process_email(db: Session, email_data: dict[str, str], company: Company) -> 
         error_text = f"{exc.__class__.__name__}: {exc}".strip()
         ticket = _new_ticket(
             company_id=company.id,
+            source_message_id=source_message_id,
             sender_email=email_data["from"],
             subject=email_data["subject"],
             body=email_data["body"],
@@ -77,6 +136,11 @@ def process_email(db: Session, email_data: dict[str, str], company: Company) -> 
             status="open",
         )
         _save_ticket(db, ticket)
+        try:
+            _send_escalation_acknowledgement(email_data, company, ticket)
+        except Exception:
+            # Ticket creation must succeed even if acknowledgement delivery fails.
+            pass
         return "escalated"
 
     if result["outcome"] == "auto_resolved":
@@ -94,6 +158,7 @@ def process_email(db: Session, email_data: dict[str, str], company: Company) -> 
             # Record auto-resolved ticket as resolved in database
             ticket = _new_ticket(
                 company_id=company.id,
+                source_message_id=source_message_id,
                 sender_email=email_data["from"],
                 subject=email_data["subject"],
                 body=email_data["body"],
@@ -108,6 +173,7 @@ def process_email(db: Session, email_data: dict[str, str], company: Company) -> 
         except Exception:
             ticket = _new_ticket(
                 company_id=company.id,
+                source_message_id=source_message_id,
                 sender_email=email_data["from"],
                 subject=email_data["subject"],
                 body=email_data["body"],
@@ -115,10 +181,16 @@ def process_email(db: Session, email_data: dict[str, str], company: Company) -> 
                 status="open",
             )
             _save_ticket(db, ticket)
+            try:
+                _send_escalation_acknowledgement(email_data, company, ticket)
+            except Exception:
+                # Ticket creation must succeed even if acknowledgement delivery fails.
+                pass
             return "escalated"
 
     ticket = _new_ticket(
         company_id=company.id,
+        source_message_id=source_message_id,
         sender_email=email_data["from"],
         subject=email_data["subject"],
         body=email_data["body"],
@@ -126,6 +198,11 @@ def process_email(db: Session, email_data: dict[str, str], company: Company) -> 
         status="open",
     )
     _save_ticket(db, ticket)
+    try:
+        _send_escalation_acknowledgement(email_data, company, ticket)
+    except Exception:
+        # Ticket creation must succeed even if acknowledgement delivery fails.
+        pass
     return "escalated"
 
 

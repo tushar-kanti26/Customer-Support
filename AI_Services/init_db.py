@@ -37,7 +37,7 @@ def init_db():
         print(f"  ✗ Failed to verify: {e}")
         return False
     
-    print("\n✓ Database initialization complete!")
+    print("\n Database initialization complete!")
     return True
 
 if __name__ == "__main__":

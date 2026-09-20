@@ -1,3 +1,7 @@
+
+
+"""Testing-only manual utility; the application does not call this script."""
+
 import argparse
 from pathlib import Path
 

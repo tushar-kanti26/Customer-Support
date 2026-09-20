@@ -5,6 +5,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
 
+"""
+   This file contains all the relational database tables schema and structures
+"""
 
 class SupportUser(Base):
     __tablename__ = "support_users"
@@ -24,9 +27,13 @@ class SupportUser(Base):
 
 class UnresolvedTicket(Base):
     __tablename__ = "unresolved_tickets"
+    __table_args__ = (
+        UniqueConstraint("company_id", "source_message_id", name="uq_unresolved_tickets_company_message"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     company_id: Mapped[int] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     sender_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     subject: Mapped[str] = mapped_column(String(255), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)

@@ -1,5 +1,6 @@
 from pinecone import Pinecone
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.config import settings
 
@@ -9,6 +10,17 @@ _embeddings: GoogleGenerativeAIEmbeddings | None = None
 
 
 def build_company_namespace(company_id: int, company_name: str | None = None) -> str:
+    """
+    This function fixes the company's name for builing the namespace.
+    build_company_namespace(42, "Acme Support Inc.")
+    # "acme-support-inc"
+
+    build_company_namespace(42, None)
+    # "company-42"
+
+    build_company_namespace(42, "!!!")
+    # "company-42"
+    """
     if company_name:
         slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in company_name).strip("-")
         slug = "-".join(part for part in slug.split("-") if part)
@@ -18,6 +30,9 @@ def build_company_namespace(company_id: int, company_name: str | None = None) ->
 
 
 def get_index():
+    """
+      This function returns the Pinecone database index
+    """
     global _client
     if _client is None:
         _client = Pinecone(api_key=settings.pinecone_api_key)
@@ -25,6 +40,10 @@ def get_index():
 
 
 def get_embedding_model() -> GoogleGenerativeAIEmbeddings:
+    
+    """
+      This function initializes and returns the embedding model
+    """
     global _embeddings
     if _embeddings is None:
         _embeddings = GoogleGenerativeAIEmbeddings(
@@ -35,6 +54,9 @@ def get_embedding_model() -> GoogleGenerativeAIEmbeddings:
 
 
 def embed_text(text: str) -> list[float]:
+    """
+      This function embeds the chunks
+    """
     model = get_embedding_model()
     vector = model.embed_query(text, output_dimensionality=settings.gemini_embedding_dimension)
     if len(vector) != settings.gemini_embedding_dimension:
@@ -44,16 +66,12 @@ def embed_text(text: str) -> list[float]:
     return vector
 
 
-def _chunk_text(text: str, chunk_size: int = 900, overlap: int = 120) -> list[str]:
-    chunks: list[str] = []
-    start = 0
-    while start < len(text):
-        end = min(len(text), start + chunk_size)
-        chunks.append(text[start:end])
-        if end == len(text):
-            break
-        start = max(0, end - overlap)
-    return chunks
+def _chunk_text(text: str, chunk_size: int = 900, chunk_overlap: int = 120) -> list[str]:
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
+    return splitter.split_text(text)
 
 
 def upsert_policy_documents(namespace: str, documents: list[tuple[str, str, int | None]]) -> int:

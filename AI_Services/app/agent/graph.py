@@ -50,37 +50,19 @@ def _extract_json_object(text: str) -> dict:
 
 
 def _deterministic_resolution(subject: str, body: str, context: list[str]) -> tuple[bool, str, str]:
-    text = f"{subject}\n{body}".lower()
     if not context:
-        return False, "", "No policy context available to verify a safe response."
-
-    patterns = [
-        (r"\b(refund|return|money back)\b", "refund/return"),
-        (r"\b(cancel|cancellation|unsubscribe)\b", "cancellation"),
-        (r"\b(track|tracking|where is my order|delivery status)\b", "order tracking"),
-        (r"\b(reset password|forgot password|password reset|can't log in|cannot log in)\b", "password reset/login"),
-        (r"\b(change address|update address|wrong address)\b", "address update"),
-        (r"\b(invoice|billing|charged|payment failed|payment issue)\b", "billing/payment"),
-    ]
-
-    for pattern, label in patterns:
-        if re.search(pattern, text):
-            reply = (
-                "Hello,\n\n"
-                "Thanks for reaching out. I can help with your request. "
-                "Based on our support policy, this issue is handled through our standard "
-                f"{label} workflow. Please reply with any missing details (order ID, account email, and relevant dates) "
-                "so we can complete this right away.\n\n"
-                "Regards,\nResolveX Team"
-            )
-            return True, reply, ""
-
-    return False, "", "Message type is outside configured auto-resolution categories."
+        return False, "", "No knowledge-base context available to safely auto-resolve this query."
+    return False, "", "The query could not be confidently resolved from uploaded knowledge-base documents."
 
 
-def retrieve_and_decide(state: EmailState) -> EmailState:
+def retrieve_policy_context(state: EmailState) -> EmailState:
     query = f"Subject: {state['subject']}\nBody: {state['body']}"
-    context = retrieve_context(query, namespace=state["company_namespace"])
+    state["retrieved_context"] = retrieve_context(query, namespace=state["company_namespace"])
+    return state
+
+
+def decide_resolution(state: EmailState) -> EmailState:
+    context = state["retrieved_context"]
 
     prompt = f"""
 You are a customer care triage assistant.
@@ -100,6 +82,7 @@ can_resolve (boolean)
 draft_reply (string)
 escalation_reason (string)
 Do not include markdown or code fences.
+Rule: can_resolve must be true only when the reply is supported by the provided policy context.
 """
     try:
         response = get_llm().invoke(prompt)
@@ -108,7 +91,6 @@ Do not include markdown or code fences.
         fallback_can_resolve, fallback_reply, fallback_reason = _deterministic_resolution(
             state["subject"], state["body"], context
         )
-        state["retrieved_context"] = context
         state["can_resolve"] = fallback_can_resolve
         state["draft_reply"] = fallback_reply or "Thank you for contacting us. We are reviewing your request."
         state["escalation_reason"] = (
@@ -121,6 +103,12 @@ Do not include markdown or code fences.
     can_resolve = bool(data.get("can_resolve", False))
     draft_reply = str(data.get("draft_reply", "")).strip()
     escalation_reason = str(data.get("escalation_reason", "")).strip() or "Insufficient policy clarity."
+
+    # Auto-resolution is allowed only when KB context exists.
+    if not context:
+        can_resolve = False
+        if not escalation_reason:
+            escalation_reason = "No knowledge-base context available to safely auto-resolve this query."
 
     if not draft_reply and can_resolve:
         # Fall back to deterministic resolver when model does not return usable JSON payload.
@@ -139,7 +127,6 @@ Do not include markdown or code fences.
         elif not escalation_reason:
             escalation_reason = fallback_reason
 
-    state["retrieved_context"] = context
     state["can_resolve"] = can_resolve
     state["draft_reply"] = draft_reply or "Thank you for contacting us. We are reviewing your request."
     state["escalation_reason"] = escalation_reason
@@ -162,12 +149,14 @@ def mark_escalated(state: EmailState) -> EmailState:
 
 def build_graph():
     graph = StateGraph(EmailState)
-    graph.add_node("retrieve_and_decide", retrieve_and_decide)
+    graph.add_node("retrieve_context", retrieve_policy_context)
+    graph.add_node("decide_resolution", decide_resolution)
     graph.add_node("resolve", mark_resolved)
     graph.add_node("escalate", mark_escalated)
 
-    graph.set_entry_point("retrieve_and_decide")
-    graph.add_conditional_edges("retrieve_and_decide", route_resolution, {"resolve": "resolve", "escalate": "escalate"})
+    graph.set_entry_point("retrieve_context")
+    graph.add_edge("retrieve_context", "decide_resolution")
+    graph.add_conditional_edges("decide_resolution", route_resolution, {"resolve": "resolve", "escalate": "escalate"})
     graph.add_edge("resolve", END)
     graph.add_edge("escalate", END)
 

@@ -2,6 +2,7 @@ import threading
 from pathlib import Path
 
 from fastapi import Depends, FastAPI
+from contextlib import asynccontextmanager
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
@@ -20,7 +21,7 @@ from app.routers.documents_router import router as documents_router
 from app.services.email_processor import poll_inbox_once
 
 
-app = FastAPI(title=settings.app_name)
+
 _stop_event = threading.Event()
 _poll_thread: threading.Thread | None = None
 
@@ -50,6 +51,8 @@ def _ensure_legacy_schema_compatibility() -> None:
 
         if "company_id" not in ticket_cols:
             conn.execute(text("ALTER TABLE unresolved_tickets ADD COLUMN company_id INTEGER"))
+        if "source_message_id" not in ticket_cols:
+            conn.execute(text("ALTER TABLE unresolved_tickets ADD COLUMN source_message_id VARCHAR(255)"))
         if "reply_sent_by" not in ticket_cols:
             conn.execute(text("ALTER TABLE unresolved_tickets ADD COLUMN reply_sent_by VARCHAR(32)"))
         if "replied_at" not in ticket_cols:
@@ -120,6 +123,26 @@ def _ensure_legacy_schema_compatibility() -> None:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_support_users_username ON support_users(username)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_support_users_role ON support_users(role)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_unresolved_tickets_company_id ON unresolved_tickets(company_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_unresolved_tickets_source_message_id ON unresolved_tickets(source_message_id)"))
+
+        conn.execute(
+            text(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'uq_unresolved_tickets_company_message'
+                    ) THEN
+                        ALTER TABLE unresolved_tickets
+                        ADD CONSTRAINT uq_unresolved_tickets_company_message UNIQUE (company_id, source_message_id);
+                    END IF;
+                END
+                $$;
+                """
+            )
+        )
 
         conn.execute(
             text(
@@ -187,8 +210,9 @@ def _auto_poll_worker() -> None:
         _stop_event.wait(settings.auto_poll_interval_seconds)
 
 
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ===============Startup================
     Base.metadata.create_all(bind=engine)
     _ensure_legacy_schema_compatibility()
     print("Database is ready.")
@@ -199,12 +223,13 @@ def on_startup() -> None:
         _poll_thread = threading.Thread(target=_auto_poll_worker, daemon=True)
         _poll_thread.start()
 
+    yield
 
-@app.on_event("shutdown")
-def on_shutdown() -> None:
+    #==============Shutdown================
     _stop_event.set()
     close_imap_sessions()
 
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 app.include_router(auth_router)
 app.include_router(ingest_router)
